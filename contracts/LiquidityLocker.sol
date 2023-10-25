@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
+import "./Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -48,7 +48,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
     );
     event onWithdraw(address lpToken, uint256 amount);
 
-    constructor() public {
+    constructor() {
         gFees.ethFee = 8e16; // 0.08 eth
         gFees.ethEditFee = 5e16; // 0.05 eth
         gFees.referralToken = IERC20(
@@ -61,7 +61,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
     function setFees(
         uint256 ethFee,
         uint256 ethEditFee,
-        uint256 refferalDiscountEthFee
+        uint256 referralDiscountEthFee
     ) public onlyOwner {
         gFees.ethFee = ethFee;
         gFees.ethEditFee = ethEditFee;
@@ -81,14 +81,12 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
      * @param _lpToken the lp token address
      * @param _amount amount of LP tokens to lock
      * @param _unlock_date the unix timestamp (in seconds) until unlock
-     * @param _referral the referrer address if any or address(0) for none
      * @param _withdrawer the user who can withdraw liquidity once the lock expires.
      */
     function lockLpTokens(
         address _lpToken,
         uint256 _amount,
         uint256 _unlock_date,
-        address payable _refferal,
         address payable _withdrawer
     ) external payable nonReentrant {
         require(_unlock_date < 10000000000, "TIMESTAMP INVALID"); // prevents errors when timestamp entered in milliseconds
@@ -120,7 +118,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
         token_lock.owner = _withdrawer;
 
         // record the lock for the lp token
-        tokenLocks[_lpToken].push(token_locker);
+        tokenLocks[_lpToken].push(token_lock);
         lockedTokens.add(_lpToken);
 
         //record the lock for the user
@@ -143,7 +141,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
      * and withdraw a smaller portion
      * @param _lpToken the lp token address
      * @param _index users[msg.sender].locksForToken[_lpToken][_index]
-     * @param _lockId tokenLocks[_lpToken][lockID]
+     * @param _lockedId tokenLocks[_lpToken][lockID]
      * @param _amount amount to split
 
      */
@@ -163,10 +161,10 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
 
         require(msg.value == gFees.ethEditFee, "FEE NOT MET");
 
-        userLock.amount = userLock.amount.sub(_amount);
+        userLock.amount = userLock.amount - (_amount);
 
         TokenLock memory token_lock;
-        token_lock.lockDate = user.lockDate;
+        token_lock.lockDate = userLock.lockDate;
         token_lock.amount = _amount;
         token_lock.initialAmount = _amount;
         token_lock.unlockDate = userLock.unlockDate;
@@ -190,7 +188,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
         uint256 _index,
         uint256 _lockId,
         uint256 _amount
-    ) external nonReentrant {
+    ) external payable nonReentrant {
         require(_amount > 0, "ZERO AMOUNT");
         uint256 lockId = users[msg.sender].locksForToken[_lpToken][_index];
         TokenLock storage userLock = tokenLocks[_lpToken][lockId];
@@ -205,7 +203,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
         // deposit lp token
         LpToken.transferFrom(address(msg.sender), address(this), _amount);
 
-        userLock.amount = userLock.amount.add(_amount);
+        userLock.amount = userLock.amount + (_amount);
 
         emit onDeposit(
             _lpToken,
@@ -224,7 +222,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
         uint256 _index,
         uint256 _lockID,
         address payable _newOwner
-    ) external {
+    ) external payable {
         require(msg.sender != _newOwner, "OWNER");
         uint256 lockID = users[msg.sender].locksForToken[_lpToken][_index];
         TokenLock storage transferredLock = tokenLocks[_lpToken][lockID];
@@ -269,7 +267,7 @@ contract EthLiquidityLocker is Ownable, ReentrancyGuard {
         ); // ensures correct lock is affected
 
         require(userLock.unlockDate < block.timestamp, "NOT YET");
-        userLock.amount = userLock.amount.sub(_amount);
+        userLock.amount = userLock.amount - (_amount);
 
         // clean user storage
         if (userLock.amount == 0) {
