@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/structs/EnumerableSet.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract EthLiquidityLocker is Ownable, ReentrancyGuard {
+contract LiquidityLocker is Ownable, ReentrancyGuard {
     using EnumerableSet for EnumerableSet.AddressSet;
 
     struct UserInfo {
