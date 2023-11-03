@@ -52,7 +52,7 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
 
     Lock[] private _locks;
 
-    FeeStruct public FEES;
+    FeeStruct public gFees;
 
     mapping(address => EnumerableSet.UintSet) private _userLpLockIds;
     mapping(address => EnumerableSet.UintSet) private _userNormalLockIds;
@@ -100,13 +100,13 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
     }
 
     constructor() {
-        FEES.ethFee = 8e16; // 0.08 eth
-        FEES.ethEditFee = 5e16; // 0.05 eth
-        FEES.referralToken = address(
-            0xC98f38D074Cb3cf8da4AC30EB99632233465aE20
+        gFees.ethFee = 8e12; // 0.08 eth
+        gFees.ethEditFee = 5e12; // 0.05 eth
+        gFees.referralToken = address(
+            0xAe6D3803B3358b09894e2f53A9f7B6A80d648B4C
         );
-        FEES.referralHold = 100e18; // 100 token
-        FEES.referralDiscountEthFee = 6e16; // 0.06 eth
+        gFees.referralHold = 100e18; // 100 token
+        gFees.referralDiscountEthFee = 6e12; // 0.06 eth
     }
 
     function setFees(
@@ -114,17 +114,17 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
         uint256 ethEditFee,
         uint256 referralDiscountEthFee
     ) public onlyOwner {
-        FEES.ethFee = ethFee;
-        FEES.ethEditFee = ethEditFee;
-        FEES.referralDiscountEthFee = referralDiscountEthFee;
+        gFees.ethFee = ethFee;
+        gFees.ethEditFee = ethEditFee;
+        gFees.referralDiscountEthFee = referralDiscountEthFee;
     }
 
     function setReferralTokenAndHold(
         address referralToken,
         uint256 referralHold
     ) public onlyOwner {
-        FEES.referralToken = address(referralToken);
-        FEES.referralHold = referralHold;
+        gFees.referralToken = address(referralToken);
+        gFees.referralHold = referralHold;
     }
 
     function lock(
@@ -145,10 +145,10 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
         require(amount > 0, "Amount should be greater than 0");
 
         uint256 validFee;
-        if (hasRefferalTokenHold(msg.sender)) {
-            validFee = FEES.ethFee;
+        if (!hasRefferalTokenHold(msg.sender)) {
+            validFee = gFees.ethFee;
         } else {
-            validFee = FEES.referralDiscountEthFee;
+            validFee = gFees.referralDiscountEthFee;
         }
 
         require(msg.value == validFee, "SERVICE FEE");
@@ -185,10 +185,10 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
         require(amount > 0, "Amount should be greater than 0");
 
         uint256 validFee;
-        if (hasRefferalTokenHold(msg.sender)) {
-            validFee = FEES.ethFee;
+        if (!hasRefferalTokenHold(msg.sender)) {
+            validFee = gFees.ethFee;
         } else {
-            validFee = FEES.referralDiscountEthFee;
+            validFee = gFees.referralDiscountEthFee;
         }
 
         require(msg.value == validFee, "SERVICE FEE");
@@ -521,10 +521,10 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
         require(userLock.withdrawnAmount == 0, "Lock was unlocked");
 
         uint256 validFee;
-        if (hasRefferalTokenHold(msg.sender)) {
-            validFee = FEES.ethEditFee;
+        if (!hasRefferalTokenHold(msg.sender)) {
+            validFee = gFees.ethEditFee;
         } else {
-            validFee = FEES.referralDiscountEthFee;
+            validFee = gFees.referralDiscountEthFee;
         }
 
         require(msg.value == validFee, "SERVICE FEE");
@@ -595,10 +595,10 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
         );
 
         uint256 validFee;
-        if (hasRefferalTokenHold(msg.sender)) {
-            validFee = FEES.ethEditFee;
+        if (!hasRefferalTokenHold(msg.sender)) {
+            validFee = gFees.ethEditFee;
         } else {
-            validFee = FEES.referralDiscountEthFee;
+            validFee = gFees.referralDiscountEthFee;
         }
 
         require(msg.value == validFee, "SERVICE FEE");
@@ -833,6 +833,7 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
 
     // consider service fee
     function hasRefferalTokenHold(address _user) internal view returns (bool) {
-        return IERC20(FEES.referralToken).balanceOf(_user) >= FEES.referralHold;
+        return
+            IERC20(gFees.referralToken).balanceOf(_user) >= gFees.referralHold;
     }
 }

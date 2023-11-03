@@ -51,7 +51,7 @@ contract TokenVesting is Ownable, ReentrancyGuard {
         uint256 referralDiscountEthFee; // discount on flatrate fees for using a valid referral address
     }
 
-    FeeStruct public FEES;
+    FeeStruct public gFees;
 
     event onLock(
         uint256 lockID,
@@ -76,13 +76,13 @@ contract TokenVesting is Ownable, ReentrancyGuard {
     );
 
     constructor() {
-        FEES.ethFee = 8e16; // 0.08 eth
-        FEES.ethEditFee = 5e16; // 0.05 eth
-        FEES.referralToken = address(
+        gFees.ethFee = 8e16; // 0.08 eth
+        gFees.ethEditFee = 5e16; // 0.05 eth
+        gFees.referralToken = address(
             0xC98f38D074Cb3cf8da4AC30EB99632233465aE20
         );
-        FEES.referralHold = 100e18; // 100 token
-        FEES.referralDiscountEthFee = 6e16; // 0.06 eth
+        gFees.referralHold = 100e18; // 100 token
+        gFees.referralDiscountEthFee = 6e16; // 0.06 eth
     }
 
     function setFees(
@@ -90,17 +90,17 @@ contract TokenVesting is Ownable, ReentrancyGuard {
         uint256 ethEditFee,
         uint256 referralDiscountEthFee
     ) public onlyOwner {
-        FEES.ethFee = ethFee;
-        FEES.ethEditFee = ethEditFee;
-        FEES.referralDiscountEthFee = referralDiscountEthFee;
+        gFees.ethFee = ethFee;
+        gFees.ethEditFee = ethEditFee;
+        gFees.referralDiscountEthFee = referralDiscountEthFee;
     }
 
     function setReferralTokenAndHold(
         address referralToken,
         uint256 referralHold
     ) public onlyOwner {
-        FEES.referralToken = address(referralToken);
-        FEES.referralHold = referralHold;
+        gFees.referralToken = address(referralToken);
+        gFees.referralHold = referralHold;
     }
 
     /**
@@ -125,9 +125,9 @@ contract TokenVesting is Ownable, ReentrancyGuard {
 
         uint256 validFee;
         if (hasRefferalTokenHold(msg.sender)) {
-            validFee = FEES.ethFee;
+            validFee = gFees.ethFee;
         } else {
-            validFee = FEES.referralDiscountEthFee;
+            validFee = gFees.referralDiscountEthFee;
         }
 
         require(msg.value == validFee, "SERVICE FEE");
@@ -277,7 +277,7 @@ contract TokenVesting is Ownable, ReentrancyGuard {
         require(userLock.owner == msg.sender, "OWNER");
         require(userLock.endEmission < _unlock_date, "END");
 
-        require(msg.value == FEES.ethEditFee, "FEE NOT MET");
+        require(msg.value == gFees.ethEditFee, "FEE NOT MET");
 
         userLock.endEmission = _unlock_date;
         emit onRelock(_lockID, _unlock_date);
@@ -294,7 +294,7 @@ contract TokenVesting is Ownable, ReentrancyGuard {
         TokenLock storage userLock = LOCKS[_lockID];
         require(_amount >= MINIMUM_DEPOSIT, "MIN DEPOSIT");
 
-        require(msg.value == FEES.ethEditFee, "FEE NOT MET");
+        require(msg.value == gFees.ethEditFee, "FEE NOT MET");
 
         IERC20 VestingToken = IERC20(userLock.tokenAddress);
         uint256 balanceBefore = VestingToken.balanceOf(address(this));
@@ -381,7 +381,7 @@ contract TokenVesting is Ownable, ReentrancyGuard {
         require(userLock.owner == msg.sender, "OWNER");
         require(userLock.startEmission == 0, "LOCK TYPE 2");
 
-        require(msg.value == FEES.ethEditFee, "FEE NOT MET");
+        require(msg.value == gFees.ethEditFee, "FEE NOT MET");
 
         // convert _amount to its representation in shares
         uint256 balance = IERC20(userLock.tokenAddress).balanceOf(
@@ -581,6 +581,7 @@ contract TokenVesting is Ownable, ReentrancyGuard {
 
     // consider service fee
     function hasRefferalTokenHold(address _user) internal view returns (bool) {
-        return IERC20(FEES.referralToken).balanceOf(_user) >= FEES.referralHold;
+        return
+            IERC20(gFees.referralToken).balanceOf(_user) >= gFees.referralHold;
     }
 }
