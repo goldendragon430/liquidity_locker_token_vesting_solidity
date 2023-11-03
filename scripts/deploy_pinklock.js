@@ -20,12 +20,12 @@ async function main() {
   // );
 
 
-  const vesting = await hre.ethers.deployContract("TokenVesting");
+  const pinklock = await hre.ethers.deployContract("MyPinkLock02");
 
-  await vesting.waitForDeployment();
+  await pinklock.waitForDeployment();
 
   console.log(
-    `Deployed to ${vesting.target}`
+    `Deployed to ${pinklock.target}`
   );
 
   // const USDT  = await hre.ethers.getContractFactory("ERC20USDT");

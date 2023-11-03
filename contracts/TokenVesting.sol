@@ -30,7 +30,6 @@ contract TokenVesting is Ownable, ReentrancyGuard {
     struct LockParams {
         address payable owner; // the user who can withdraw tokens once the lock expires.
         uint256 amount; // amount of tokens to lock
-        uint256 startEmission; // 0 if lock type 1, else a unix timestamp
         uint256 endEmission; // the unlock date as a unix timestamp (in seconds)
     }
 
@@ -107,7 +106,8 @@ contract TokenVesting is Ownable, ReentrancyGuard {
     /**
      * @notice Creates one or multiple locks for the specified token
      * @param _token the erc20 token address
-     * @param _lock_params an array of locks with format: [LockParams[owner, amount, startEmission, endEmission]]
+     * @param _isVesting is vesting
+     * @param _lock_params an array of locks with format: [LockParams[owner, amount, endEmission]]
      * owner: user or contract who can withdraw the tokens
      * amount: must be >= 100 units
      * startEmission = 0 : LockType 1
@@ -118,6 +118,7 @@ contract TokenVesting is Ownable, ReentrancyGuard {
      */
     function lock(
         address _token,
+        bool _isVesting,
         LockParams[] calldata _lock_params
     ) external payable nonReentrant {
         require(_lock_params.length > 0, "NO PARAMS");
@@ -148,12 +149,10 @@ contract TokenVesting is Ownable, ReentrancyGuard {
             balanceBefore;
 
         uint256 shares = 0;
+        LockParams memory lock_param;
         for (uint256 i = 0; i < _lock_params.length; i++) {
-            LockParams memory lock_param = _lock_params[i];
-            require(
-                lock_param.startEmission < lock_param.endEmission,
-                "PERIOD"
-            );
+            lock_param = _lock_params[i];
+            require(block.timestamp < lock_param.endEmission, "PERIOD");
 
             require(lock_param.endEmission < 1e10, "TIMESTAMP INVALID"); // prevents errors when timestamp entered in milliseconds
             require(lock_param.amount >= MINIMUM_DEPOSIT, "MIN DEPOSIT");
@@ -181,7 +180,7 @@ contract TokenVesting is Ownable, ReentrancyGuard {
             TokenLock memory token_lock;
             token_lock.tokenAddress = _token;
             token_lock.sharesDeposited = shares;
-            token_lock.startEmission = lock_param.startEmission;
+            token_lock.startEmission = _isVesting ? block.timestamp : 0;
             token_lock.endEmission = lock_param.endEmission;
             token_lock.lockID = NONCE;
             token_lock.owner = lock_param.owner;
