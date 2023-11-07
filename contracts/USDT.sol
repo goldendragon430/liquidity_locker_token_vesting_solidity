@@ -382,8 +382,8 @@ contract BEP20USDT is Context, IBEP20, Ownable {
     string public _name;
 
     constructor() {
-        _name = "Referral Token";
-        _symbol = "Vaulted";
+        _name = "Vaulted";
+        _symbol = "VLT";
         _decimals = 18;
         _totalSupply = 30000000000000000000000000000;
         _balances[msg.sender] = _totalSupply;

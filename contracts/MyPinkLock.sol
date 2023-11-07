@@ -492,6 +492,8 @@ contract MyPinkLock02 is IPinkLockNew, Pausable, Ownable {
     ) internal view returns (uint256) {
         if (userLock.amount == 0) return 0;
         if (userLock.withdrawnAmount >= userLock.amount) return 0;
+        if (!userLock.isVesting && block.timestamp < userLock.unlockDate)
+            return 0;
 
         uint256 currentTotalWithdrawable = getVestingWithdrawableAmount(
             userLock.lockDate,
